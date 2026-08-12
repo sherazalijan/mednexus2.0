@@ -1,0 +1,77 @@
+import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+
+from app.core.rate_limit import limiter
+from app.routes.auth import router as auth_router
+from app.routes.books import router as books_router
+from app.routes.chapters import router as chapters_router
+from app.routes.mcqs import router as mcqs_router
+from app.routes.quiz import router as quiz_router
+from app.routes.users import router as users_router
+from app.routes.admin import router as admin_router
+from app.routes.bulk_upload import router as bulk_upload_router
+from app.routes.progress import router as progress_router
+from app.routes.bookmarks import router as bookmarks_router
+from app.routes.flags import router as flags_router
+from app.routes.announcements import router as announcements_router
+from app.routes.revision import router as revision_router
+from app.routes.payments import router as payments_router
+from app.routes.contact import router as contact_router
+from app.routes.leads import router as leads_router
+from app.routes.coming_soon_books import router as coming_soon_router
+
+app = FastAPI(title="MedNexus API")
+
+# Rate limiting (slowapi). Individual limits are set per-route with
+# @limiter.limit(...) — see auth.py (/login, /password-reset/request) and
+# flags.py (/mcqs/{id}/flag). This just wires the shared limiter + a
+# handler that returns a clean 429 instead of an unhandled exception.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# BEFORE: allow_origins=["*"] with allow_credentials=False. That combo is
+# tolerable *only* because credentials aren't used, but it means literally
+# any website can call this API from a user's browser. Now that requests
+# carry a bearer token in a header (not a cookie), it's not a CSRF vector,
+# but you should still restrict this to your real frontend origin(s) in
+# production instead of "*".
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router)
+app.include_router(books_router)
+app.include_router(chapters_router)
+app.include_router(mcqs_router)
+app.include_router(quiz_router)
+app.include_router(users_router)
+app.include_router(admin_router)
+app.include_router(bulk_upload_router)
+app.include_router(progress_router)
+app.include_router(bookmarks_router)
+app.include_router(flags_router)
+app.include_router(announcements_router)
+app.include_router(revision_router)
+app.include_router(payments_router)
+app.include_router(contact_router)
+app.include_router(leads_router)
+app.include_router(coming_soon_router)
+
+
+@app.get("/")
+def home():
+    return {"message": "MedNexus Backend Running"}
