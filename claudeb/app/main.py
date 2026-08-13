@@ -47,6 +47,25 @@ async def log_request_paths(request: Request, call_next):
     return await call_next(request)
 
 
+@app.get("/debug-verify")
+def debug_verify():
+    import traceback
+    from app.core.security import pwd_context
+    try:
+        # Test verification of a standard hash
+        test_hash = "$2b$12$WCH4QoPT5qutkk6H/nqSqed.0dMMEDUxITGm2KrDphV7WfTRFNQK."
+        result = pwd_context.verify("demo123", test_hash) if pwd_context else False
+        return {"status": "success", "verified": result}
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_message": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc(),
+        }
+
+
+
 
 
 # Rate limiting (slowapi). Individual limits are set per-route with
