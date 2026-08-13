@@ -70,6 +70,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi import Response
+
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
+
+
 app.include_router(auth_router)
 app.include_router(books_router)
 app.include_router(chapters_router)
