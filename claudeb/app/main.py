@@ -25,6 +25,22 @@ from app.routes.coming_soon_books import router as coming_soon_router
 
 app = FastAPI(title="MedNexus API")
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.middleware("http")
+async def log_request_paths(request: Request, call_next):
+    if request.query_params.get("debug") == "1" or "debug" in request.url.path:
+        return JSONResponse({
+            "url_path": request.url.path,
+            "scope_path": request.scope.get("path"),
+            "scope_root_path": request.scope.get("root_path"),
+            "query_params": dict(request.query_params),
+            "method": request.method,
+        })
+    return await call_next(request)
+
+
 # Rate limiting (slowapi). Individual limits are set per-route with
 # @limiter.limit(...) — see auth.py (/login, /password-reset/request) and
 # flags.py (/mcqs/{id}/flag). This just wires the shared limiter + a
