@@ -30,7 +30,7 @@ from fastapi.responses import JSONResponse
 
 @app.middleware("http")
 async def log_request_paths(request: Request, call_next):
-    if request.query_params.get("debug") == "1" or "debug" in request.url.path:
+    if request.query_params.get("debug") == "1" or ("debug" in request.url.path and "debug-verify" not in request.url.path):
         from app.core.security import pwd_context
         from app.database.base import engine
         return JSONResponse({
@@ -45,6 +45,7 @@ async def log_request_paths(request: Request, call_next):
             "db_name": engine.url.database if engine and engine.url else None,
         })
     return await call_next(request)
+
 
 
 @app.get("/debug-verify")
