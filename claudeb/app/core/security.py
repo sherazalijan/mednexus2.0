@@ -8,6 +8,18 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+# Patch bcrypt/passlib compatibility issue for Python 3.12+
+try:
+    import bcrypt
+    if not hasattr(bcrypt, "__about__"):
+        class AboutObj:
+            pass
+        about_mock = AboutObj()
+        about_mock.__version__ = getattr(bcrypt, "__version__", "4.0.0")
+        bcrypt.__about__ = about_mock
+except Exception:
+    pass
+
 from passlib.context import CryptContext
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -17,10 +29,8 @@ from app.database.base import get_db
 # ---------------------------------------------------------------------------
 # Password hashing
 # ---------------------------------------------------------------------------
-try:
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-except Exception:
-    pwd_context = None
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 
 def hash_password(plain_password: str) -> str:
