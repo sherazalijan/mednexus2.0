@@ -8,52 +8,53 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-# Patch bcrypt/passlib compatibility issue for Python 3.12+
-try:
-    import bcrypt
-    if not hasattr(bcrypt, "__about__"):
-        class AboutObj:
-            pass
-        about_mock = AboutObj()
-        about_mock.__version__ = getattr(bcrypt, "__version__", "4.0.0")
-        bcrypt.__about__ = about_mock
-except Exception:
-    pass
-
-from passlib.context import CryptContext
+import bcrypt
+import traceback
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
 from app.database.base import get_db
 
-# ---------------------------------------------------------------------------
-# Password hashing
-# ---------------------------------------------------------------------------
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Define a mock/compatibility pwd_context so main.py debug routes don't crash
+class CompatibilityContext:
+    def schemes(self):
+        return ["bcrypt"]
+    def verify(self, secret, hash_str):
+        secret_bytes = secret.encode('utf-8')
+        hash_bytes = hash_str.encode('utf-8')
+        return bcrypt.checkpw(secret_bytes, hash_bytes)
 
+pwd_context = CompatibilityContext()
 
-
-import traceback
 
 def hash_password(plain_password: str) -> str:
-    if pwd_context:
-        try:
-            return pwd_context.hash(plain_password)
-        except Exception as e:
-            print("hash_password error:", str(e))
-            traceback.print_exc()
-    return hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
+    try:
+        # bcrypt expects bytes
+        pwd_bytes = plain_password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(pwd_bytes, salt)
+        return hashed.decode('utf-8')
+    except Exception as e:
+        print("hash_password direct bcrypt error:", str(e))
+        traceback.print_exc()
+        return hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    if pwd_context:
-        try:
-            return pwd_context.verify(plain_password, password_hash)
-        except Exception as e:
-            print("verify_password error:", str(e))
-            traceback.print_exc()
-    h = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
-    return h == password_hash or plain_password == password_hash
+    try:
+        pwd_bytes = plain_password.encode('utf-8')
+        hash_bytes = password_hash.encode('utf-8')
+        
+        # Verify standard bcrypt hash
+        if password_hash.startswith("$2"):
+            return bcrypt.checkpw(pwd_bytes, hash_bytes)
+            
+        # Fallback SHA-256 or plaintext
+        h = hashlib.sha256(pwd_bytes).hexdigest()
+        return h == password_hash or plain_password == password_hash
+    except Exception as e:
+        print("verify_password direct bcrypt error:", str(e))
+        traceback.print_exc()
+        return False
 
 
 def generate_temp_password(length: int = 12) -> str:
