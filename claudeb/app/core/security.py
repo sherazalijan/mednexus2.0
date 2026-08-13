@@ -33,12 +33,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 
+import traceback
+
 def hash_password(plain_password: str) -> str:
     if pwd_context:
         try:
             return pwd_context.hash(plain_password)
-        except Exception:
-            pass
+        except Exception as e:
+            print("hash_password error:", str(e))
+            traceback.print_exc()
     return hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
 
 
@@ -46,8 +49,9 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
     if pwd_context:
         try:
             return pwd_context.verify(plain_password, password_hash)
-        except Exception:
-            pass
+        except Exception as e:
+            print("verify_password error:", str(e))
+            traceback.print_exc()
     h = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
     return h == password_hash or plain_password == password_hash
 
