@@ -25,45 +25,7 @@ from app.routes.coming_soon_books import router as coming_soon_router
 
 app = FastAPI(title="MedNexus API")
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
 
-@app.middleware("http")
-async def log_request_paths(request: Request, call_next):
-    if request.query_params.get("debug") == "1" or ("debug" in request.url.path and "debug-verify" not in request.url.path):
-        from app.core.security import pwd_context
-        from app.database.base import engine
-        return JSONResponse({
-            "url_path": request.url.path,
-            "scope_path": request.scope.get("path"),
-            "scope_root_path": request.scope.get("root_path"),
-            "query_params": dict(request.query_params),
-            "method": request.method,
-            "pwd_context_loaded": pwd_context is not None,
-            "pwd_context_schemes": pwd_context.schemes() if pwd_context else None,
-            "db_host": engine.url.host if engine and engine.url else None,
-            "db_name": engine.url.database if engine and engine.url else None,
-        })
-    return await call_next(request)
-
-
-
-@app.get("/debug-verify")
-def debug_verify():
-    import traceback
-    from app.core.security import pwd_context
-    try:
-        # Test verification of a standard hash
-        test_hash = "$2b$12$WCH4QoPT5qutkk6H/nqSqed.0dMMEDUxITGm2KrDphV7WfTRFNQK."
-        result = pwd_context.verify("demo123", test_hash) if pwd_context else False
-        return {"status": "success", "verified": result}
-    except Exception as e:
-        return {
-            "status": "error",
-            "error_message": str(e),
-            "error_type": type(e).__name__,
-            "traceback": traceback.format_exc(),
-        }
 
 
 
