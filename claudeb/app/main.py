@@ -32,6 +32,7 @@ from fastapi.responses import JSONResponse
 async def log_request_paths(request: Request, call_next):
     if request.query_params.get("debug") == "1" or "debug" in request.url.path:
         from app.core.security import pwd_context
+        from app.database.base import engine
         return JSONResponse({
             "url_path": request.url.path,
             "scope_path": request.scope.get("path"),
@@ -40,8 +41,11 @@ async def log_request_paths(request: Request, call_next):
             "method": request.method,
             "pwd_context_loaded": pwd_context is not None,
             "pwd_context_schemes": pwd_context.schemes() if pwd_context else None,
+            "db_host": engine.url.host if engine and engine.url else None,
+            "db_name": engine.url.database if engine and engine.url else None,
         })
     return await call_next(request)
+
 
 
 
