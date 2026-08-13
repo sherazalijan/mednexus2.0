@@ -31,14 +31,18 @@ from fastapi.responses import JSONResponse
 @app.middleware("http")
 async def log_request_paths(request: Request, call_next):
     if request.query_params.get("debug") == "1" or "debug" in request.url.path:
+        from app.core.security import pwd_context
         return JSONResponse({
             "url_path": request.url.path,
             "scope_path": request.scope.get("path"),
             "scope_root_path": request.scope.get("root_path"),
             "query_params": dict(request.query_params),
             "method": request.method,
+            "pwd_context_loaded": pwd_context is not None,
+            "pwd_context_schemes": pwd_context.schemes() if pwd_context else None,
         })
     return await call_next(request)
+
 
 
 # Rate limiting (slowapi). Individual limits are set per-route with
