@@ -38,11 +38,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # carry a bearer token in a header (not a cookie), it's not a CSRF vector,
 # but you should still restrict this to your real frontend origin(s) in
 # production instead of "*".
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS_RAW.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
+    allow_origins=["*"] if "*" in ALLOWED_ORIGINS else ALLOWED_ORIGINS + [
         "http://localhost:8080",
         "http://127.0.0.1:8080",
         "http://localhost:5173",
